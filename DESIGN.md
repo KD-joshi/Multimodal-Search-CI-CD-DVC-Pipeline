@@ -1,7 +1,7 @@
 # Design Document — Product Similarity Search
 
 > **Author:** Kuldeep Joshi  
-> **Assignment:** SAP CX II Technical Exercise — Product Similarity Search  
+> **Project:** Multimodal Fashion Search Engine  
 > **Date:** July 2026
 
 ---

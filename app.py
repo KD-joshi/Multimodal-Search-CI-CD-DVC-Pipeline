@@ -85,13 +85,13 @@ async def lifespan(app: FastAPI):
 
 # Create the FastAPI app
 app = FastAPI(
-    title="Product Similarity Search API",
+    title="Multimodal Fashion Search API",
     description=(
-        "Multimodal product similarity search for Amazon Fashion products. "
-        "Uses FAISS HNSW for fast approximate nearest neighbor search with "
-        "Sentence-BERT text embeddings, CLIP visual embeddings, and structured feature encoding."
+        "Multimodal product search engine for fashion e-commerce. "
+        "Supports text queries, image uploads, and product ID lookups. "
+        "Uses FAISS HNSW, BM25, FashionCLIP, and Cross-Encoder re-ranking."
     ),
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -101,7 +101,93 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+
+# ==============================================================================
+# NEW: Text & Image Search Endpoints (user-facing queries)
+# ==============================================================================
+
+from pydantic import BaseModel
+from fastapi import File, UploadFile, Form
+
+
+class TextSearchRequest(BaseModel):
+    query: str
+    top_k: int = 10
+    mode: str = "text_structured"
+
+
+@app.post("/search/text")
+async def search_by_text(request: TextSearchRequest):
+    """
+    Search for products using a natural language text query.
+    
+    Example: {"query": "red summer dress", "top_k": 5}
+    """
+    if search is None or not search._initialized:
+        raise HTTPException(status_code=503, detail="Service not ready")
+    
+    try:
+        start = time.perf_counter()
+        results = search.search_by_text(
+            query=request.query,
+            top_k=request.top_k,
+            mode=request.mode,
+        )
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        
+        logger.info(f"Text search for '{request.query[:50]}' returned {len(results)} results in {elapsed_ms:.1f}ms")
+        
+        return {
+            "results": results,
+            "query_type": "text",
+            "query": request.query,
+            "latency_ms": round(elapsed_ms, 2),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Text search error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/search/image")
+async def search_by_image(
+    file: UploadFile = File(..., description="Image file to search with"),
+    top_k: int = Form(10, description="Number of results to return"),
+):
+    """
+    Search for products by uploading an image.
+    The image is encoded through FashionCLIP and matched against the visual index.
+    """
+    if search is None or not search._initialized:
+        raise HTTPException(status_code=503, detail="Service not ready")
+    
+    try:
+        image_bytes = await file.read()
+        
+        start = time.perf_counter()
+        results = search.search_by_image(
+            image_bytes=image_bytes,
+            top_k=top_k,
+        )
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        
+        logger.info(f"Image search returned {len(results)} results in {elapsed_ms:.1f}ms")
+        
+        return {
+            "results": results,
+            "query_type": "image",
+            "latency_ms": round(elapsed_ms, 2),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Image search error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/health")
 def health_check():

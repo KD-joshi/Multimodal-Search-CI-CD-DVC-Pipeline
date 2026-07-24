@@ -250,6 +250,19 @@ class TextEmbedder:
         
         logger.info(f"Text embeddings shape: {embeddings.shape}")
         return embeddings.astype(np.float32)
+    
+    def encode_single(self, text: str) -> np.ndarray:
+        """
+        Encode a single text query into a 384-dim L2-normalized vector.
+        Used for on-the-fly user search queries.
+        """
+        self._load_model()
+        embedding = self._model.encode(
+            [text],
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        return embedding[0].astype(np.float32)
 
 
 class ImageEmbedder:
@@ -366,6 +379,35 @@ class ImageEmbedder:
         logger.info(f"Valid image embeddings: {n_valid}/{len(embeddings)}")
         
         return embeddings
+    
+    def encode_single_from_bytes(self, image_bytes: bytes) -> np.ndarray:
+        """
+        Encode a single image (from raw bytes) into a 512-dim L2-normalized vector.
+        Used for on-the-fly user image uploads.
+        """
+        import torch
+        from PIL import Image
+        from io import BytesIO
+        
+        self._load_model()
+        
+        img = Image.open(BytesIO(image_bytes)).convert('RGB')
+        inputs = self._processor(images=[img], return_tensors="pt", padding=True)
+        inputs = {k: v.to(self._device) for k, v in inputs.items()}
+        
+        with torch.no_grad():
+            features = self._model.get_image_features(**inputs)
+            if not isinstance(features, torch.Tensor):
+                if hasattr(features, "image_embeds"):
+                    features = features.image_embeds
+                elif hasattr(features, "pooler_output"):
+                    features = features.pooler_output
+                else:
+                    features = features[0]
+            features = features / features.norm(dim=-1, keepdim=True)
+            features = features.cpu().numpy()
+        
+        return features[0].astype(np.float32)
 
 
 def normalize_l2(vectors: np.ndarray) -> np.ndarray:

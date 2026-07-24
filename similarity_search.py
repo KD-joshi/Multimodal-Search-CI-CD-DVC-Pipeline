@@ -305,6 +305,97 @@ class ProductSimilaritySearch:
         
         return pd.DataFrame(rows)
     
+    def search_by_text(self, query: str, top_k: int = 10, mode: str = "text_structured") -> List[Dict]:
+        """
+        Search for products using a raw text query (e.g., 'red summer dress').
+        Encodes the query on-the-fly and queries FAISS directly.
+        
+        Returns a list of dicts with product metadata and scores.
+        """
+        if not self._initialized:
+            raise RuntimeError("Must call initialize() or load() first")
+        
+        if mode not in self.engines:
+            raise ValueError(f"Invalid mode '{mode}'. Available: {list(self.engines.keys())}")
+        
+        # Lazy-load text embedder if not already loaded
+        if self.text_embedder is None:
+            self.text_embedder = TextEmbedder()
+        
+        # Encode the raw text query
+        query_vector = self.text_embedder.encode_single(query)
+        
+        # For text_structured mode, we need to pad with zeros for the structured feature dimensions
+        if mode == "text_structured":
+            struct_dim = self.structured_features.shape[1] if self.structured_features is not None else 0
+            if struct_dim > 0:
+                # Pad the text embedding with zeros for the structured portion
+                struct_zeros = np.zeros(struct_dim, dtype=np.float32)
+                text_struct = np.hstack([query_vector, struct_zeros])
+                text_struct = normalize_l2(text_struct.reshape(1, -1))[0]
+                query_vector = text_struct
+        
+        engine = self.engines[mode]
+        distances, indices = engine.search_single(query_vector, k=min(top_k + 1, len(self.product_ids)))
+        
+        results = []
+        for dist, idx in zip(distances, indices):
+            if idx < 0:
+                continue
+            row = self.df.iloc[idx]
+            results.append({
+                'uniq_id': self.product_ids[idx],
+                'product_name': row['product_name'],
+                'brand': row['brand'],
+                'sales_price': float(row['sales_price']) if pd.notna(row['sales_price']) else None,
+                'rating': float(row['rating']) if pd.notna(row['rating']) else None,
+                'image_url': row['image_url'] if pd.notna(row['image_url']) else None,
+                'score': float(dist),
+            })
+        
+        return results[:top_k]
+    
+    def search_by_image(self, image_bytes: bytes, top_k: int = 10) -> List[Dict]:
+        """
+        Search for products using an uploaded image.
+        Encodes the image on-the-fly via FashionCLIP and queries the image FAISS index.
+        
+        Returns a list of dicts with product metadata and scores.
+        """
+        if not self._initialized:
+            raise RuntimeError("Must call initialize() or load() first")
+        
+        if "image" not in self.engines:
+            raise ValueError("Image search is not available. Build the index with image embeddings first.")
+        
+        # Lazy-load image embedder
+        if not hasattr(self, '_image_embedder') or self._image_embedder is None:
+            self._image_embedder = ImageEmbedder()
+        
+        # Encode the uploaded image
+        query_vector = self._image_embedder.encode_single_from_bytes(image_bytes)
+        query_vector = normalize_l2(query_vector.reshape(1, -1))[0]
+        
+        engine = self.engines["image"]
+        distances, indices = engine.search_single(query_vector, k=min(top_k + 1, len(self.product_ids)))
+        
+        results = []
+        for dist, idx in zip(distances, indices):
+            if idx < 0:
+                continue
+            row = self.df.iloc[idx]
+            results.append({
+                'uniq_id': self.product_ids[idx],
+                'product_name': row['product_name'],
+                'brand': row['brand'],
+                'sales_price': float(row['sales_price']) if pd.notna(row['sales_price']) else None,
+                'rating': float(row['rating']) if pd.notna(row['rating']) else None,
+                'image_url': row['image_url'] if pd.notna(row['image_url']) else None,
+                'score': float(dist),
+            })
+        
+        return results[:top_k]
+    
     def save(self, index_dir: str = None):
         index_dir = index_dir or config.INDEX_DIR
         os.makedirs(index_dir, exist_ok=True)
