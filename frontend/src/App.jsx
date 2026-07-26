@@ -2,8 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Search, Image as ImageIcon, Hash, UploadCloud, ChevronRight, Link as LinkIcon } from 'lucide-react';
 import './App.css';
 
-// Fallback to the Colab GPU backend for everything since Vercel's Python builder is failing
-const TEXT_API_URL = 'https://ahoy-september-relocate.ngrok-free.dev';
+// Split-Routing configuration
+// Text/UID queries route to the Serverless Vercel API
+const TEXT_API_URL = import.meta.env.VITE_API_URL || '/api';
 // Image queries route to the GPU-backed Colab API
 const IMAGE_API_URL = 'https://ahoy-september-relocate.ngrok-free.dev';
 
