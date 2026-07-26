@@ -2,8 +2,11 @@ import React, { useState, useRef } from 'react';
 import { Search, Image as ImageIcon, Hash, UploadCloud, ChevronRight, Link as LinkIcon } from 'lucide-react';
 import './App.css';
 
-// Default to local, but allow overriding via localStorage
-const API_BASE_URL = localStorage.getItem('API_BASE_URL') || 'https://ahoy-september-relocate.ngrok-free.dev';
+// Split-Routing configuration
+// Text/UID queries route to the Serverless Vercel API
+const TEXT_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Image queries route to the GPU-backed Colab API
+const IMAGE_API_URL = 'https://ahoy-september-relocate.ngrok-free.dev';
 
 function App() {
   const [activeMode, setActiveMode] = useState('text');
@@ -30,7 +33,7 @@ function App() {
     if (!textQuery.trim()) return;
     setLoading(true); setError(null); setResults(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/search/text`, {
+      const res = await fetch(`${TEXT_API_URL}/search/text`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -67,7 +70,7 @@ function App() {
         formData.append('file', blob, 'query.jpg');
       }
 
-      const res = await fetch(`${API_BASE_URL}/search/image`, {
+      const res = await fetch(`${IMAGE_API_URL}/search/image`, {
         method: 'POST',
         headers: {
           'ngrok-skip-browser-warning': 'true'
@@ -89,7 +92,7 @@ function App() {
     if (!uidQuery.trim()) return;
     setLoading(true); setError(null); setResults(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/find_similar_products_detailed?product_id=${uidQuery}&num_similar=${uidTopK}&mode=${uidMode}`, {
+      const res = await fetch(`${TEXT_API_URL}/find_similar_products_detailed?product_id=${uidQuery}&num_similar=${uidTopK}&mode=${uidMode}`, {
         headers: {
           'ngrok-skip-browser-warning': 'true'
         }
