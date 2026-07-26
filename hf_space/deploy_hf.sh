@@ -1,84 +1,80 @@
 #!/bin/bash
-# Deploy the FastAPI backend to Hugging Face Spaces.
-#
-# Prerequisites:
-#   1. pip install huggingface_hub
-#   2. huggingface-cli login  (paste your HF token)
-#
-# Usage:
-#   bash deploy_hf.sh
-
+# Deploy the FastAPI backend to Hugging Face Spaces using the Python API (Bypasses Git issues)
 set -e
 
-SPACE_NAME="kd-joshi/multimodal-fashion-search"
+HF_USER=$(.venv/bin/python -c "from huggingface_hub import HfApi; print(HfApi().whoami()['name'])")
+SPACE_NAME="$HF_USER/multimodal-fashion-search"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "=== Deploying to HuggingFace Space: $SPACE_NAME ==="
 
-# Clone the space repo (or create it)
+# 1. Create a clean staging directory
 TEMP_DIR=$(mktemp -d)
-echo "Cloning space repo into $TEMP_DIR..."
+STAGING="$TEMP_DIR/space"
+mkdir -p "$STAGING"
 
-if ! git clone "https://huggingface.co/spaces/$SPACE_NAME" "$TEMP_DIR/space" 2>/dev/null; then
-    echo "Space doesn't exist yet. Creating..."
-    python3 -c "
-from huggingface_hub import HfApi
-api = HfApi()
-api.create_repo('$SPACE_NAME', repo_type='space', space_sdk='docker', private=False)
-print('Space created!')
-"
-    git clone "https://huggingface.co/spaces/$SPACE_NAME" "$TEMP_DIR/space"
-fi
+echo "Staging files in $STAGING..."
 
-cd "$TEMP_DIR/space"
+# 2. Copy the HF Space README (contains the YAML config) and Dockerfile
+cp "$PROJECT_DIR/hf_space/README.md" "$STAGING/README.md"
+cp "$PROJECT_DIR/hf_space/Dockerfile" "$STAGING/Dockerfile"
 
-# Enable Git LFS for large files
-git lfs install
-
-# Track large binary files with LFS
-git lfs track "*.npy"
-git lfs track "*.index"
-git lfs track "*.pkl"
-git lfs track "*.parquet"
-git lfs track "*.png"
-git lfs track "*.zip"
-
-# Copy the HF Space README (contains the YAML config)
-cp "$PROJECT_DIR/hf_space/README.md" ./README.md
-
-# Copy the HF-specific Dockerfile
-cp "$PROJECT_DIR/hf_space/Dockerfile" ./Dockerfile
-
-# Copy application code
+# 3. Copy application code
 for f in app.py config.py similarity_search.py similarity_engine.py feature_engine.py \
          data_loader.py hybrid_search.py reranker.py build_index.py requirements.txt \
          demo.html; do
-    cp "$PROJECT_DIR/$f" ./ 2>/dev/null || true
+    cp "$PROJECT_DIR/$f" "$STAGING/" 2>/dev/null || true
 done
 
-# Copy subdirectories
-cp -r "$PROJECT_DIR/k8s" ./ 2>/dev/null || true
-cp -r "$PROJECT_DIR/tests" ./ 2>/dev/null || true
-cp -r "$PROJECT_DIR/assets" ./ 2>/dev/null || true
+# 4. Copy subdirectories
+cp -r "$PROJECT_DIR/k8s" "$STAGING/" 2>/dev/null || true
+cp -r "$PROJECT_DIR/tests" "$STAGING/" 2>/dev/null || true
+cp -r "$PROJECT_DIR/assets" "$STAGING/" 2>/dev/null || true
 
-# Copy the dataset archive
-mkdir -p data
-cp "$PROJECT_DIR/data/archive.zip" ./data/ 2>/dev/null || true
+# 5. Copy the dataset archive
+mkdir -p "$STAGING/data"
+cp "$PROJECT_DIR/data/archive.zip" "$STAGING/data/" 2>/dev/null || true
 
-# Copy pre-built indices (the key part — these are ~462MB)
-echo "Copying pre-built indices (~462MB, this may take a moment)..."
-mkdir -p indices
-cp "$PROJECT_DIR/indices/"* ./indices/
+# 6. Copy pre-built indices (~462MB)
+echo "Copying pre-built indices (~462MB)..."
+mkdir -p "$STAGING/indices"
+cp "$PROJECT_DIR/indices/"* "$STAGING/indices/"
 
-# Stage everything
-git add -A
-git status
+echo "Files staged successfully. Uploading directly via HuggingFace API..."
 
-echo ""
-echo "=== Ready to push! ==="
-echo "Review the staged files above, then run:"
-echo "  cd $TEMP_DIR/space && git commit -m 'Deploy multimodal fashion search' && git push"
-echo ""
-echo "Or to push automatically, uncomment the lines below in the script."
-# git commit -m "Deploy multimodal fashion search API"
-# git push
+# 7. Use the Python API to create repo and upload folder directly (bypassing Git)
+.venv/bin/python -c "
+from huggingface_hub import HfApi
+import sys
+
+api = HfApi()
+repo_id = '$SPACE_NAME'
+staging_dir = '$STAGING'
+
+try:
+    print(f'Checking if {repo_id} exists...')
+    api.repo_info(repo_id, repo_type='space')
+except Exception:
+    print(f'Creating space {repo_id}...')
+    try:
+        api.create_repo(repo_id, repo_type='space', space_sdk='docker', private=False)
+    except Exception as e:
+        print(f'❌ Failed to create space: {e}')
+        print('Make sure your HuggingFace token has "Write" permissions (specifically to create repositories).')
+        sys.exit(1)
+
+print('Uploading files... This may take a few minutes for 460MB.')
+try:
+    api.upload_folder(
+        folder_path=staging_dir,
+        repo_id=repo_id,
+        repo_type='space',
+        commit_message='Deploy multimodal fashion search API'
+    )
+    print('✅ Upload complete! The space is now building on HuggingFace.')
+except Exception as e:
+    print(f'❌ Upload failed: {e}')
+    sys.exit(1)
+"
+
+rm -rf "$TEMP_DIR"

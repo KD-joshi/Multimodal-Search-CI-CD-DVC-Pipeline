@@ -1,0 +1,13 @@
+{
+  "id": "kuldeepjoshi2941/mlops-drift-retraining",
+  "title": "Automated MLOps Drift Retraining",
+  "code_file": "drift_retraining.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_internet": "true",
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}
