@@ -6,3 +6,4 @@ pinecone
 pydantic
 huggingface_hub
 supabase>=2.3.0
+numpy
