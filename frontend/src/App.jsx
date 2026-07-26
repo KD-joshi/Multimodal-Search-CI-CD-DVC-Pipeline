@@ -32,7 +32,10 @@ function App() {
     try {
       const res = await fetch(`${API_BASE_URL}/search/text`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
         body: JSON.stringify({ query: textQuery, top_k: textTopK })
       });
       const data = await res.json();
@@ -66,6 +69,9 @@ function App() {
 
       const res = await fetch(`${API_BASE_URL}/search/image`, {
         method: 'POST',
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        },
         body: formData
       });
       const data = await res.json();
@@ -83,7 +89,11 @@ function App() {
     if (!uidQuery.trim()) return;
     setLoading(true); setError(null); setResults(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/find_similar_products_detailed?product_id=${uidQuery}&num_similar=${uidTopK}&mode=${uidMode}`);
+      const res = await fetch(`${API_BASE_URL}/find_similar_products_detailed?product_id=${uidQuery}&num_similar=${uidTopK}&mode=${uidMode}`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Server Error');
 
