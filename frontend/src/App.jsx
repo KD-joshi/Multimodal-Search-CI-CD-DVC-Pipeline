@@ -4,7 +4,7 @@ import './App.css';
 
 // Split-Routing configuration
 // Text/UID queries route to the Serverless Vercel API
-const TEXT_API_URL = import.meta.env.VITE_API_URL || '/api/index';
+const TEXT_API_URL = import.meta.env.VITE_API_URL || '/api';
 // Image queries route to the GPU-backed Colab API
 const IMAGE_API_URL = 'https://ahoy-september-relocate.ngrok-free.dev';
 
