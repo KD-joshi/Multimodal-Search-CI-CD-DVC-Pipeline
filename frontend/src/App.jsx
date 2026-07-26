@@ -70,7 +70,7 @@ function App() {
         formData.append('file', blob, 'query.jpg');
       }
 
-      const res = await fetch(`${IMAGE_API_URL}/search/image`, {
+      const res = await fetch(`${IMAGE_API_URL}/api/search/image`, {
         method: 'POST',
         headers: {
           'ngrok-skip-browser-warning': 'true'

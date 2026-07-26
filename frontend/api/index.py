@@ -106,8 +106,8 @@ class TextSearchRequest(BaseModel):
     mode: str = "text_structured"
 
 
-@app.post("/search/text")
-async def search_by_text(req: TextSearchRequest, background_tasks: BackgroundTasks):
+@app.post("/api/search/text")
+async def search_text(req: TextSearchRequest, background_tasks: BackgroundTasks):
     """
     Search using natural language.
     Passes query through HuggingFace Inference API, then queries Pinecone.
@@ -140,8 +140,13 @@ async def search_by_text(req: TextSearchRequest, background_tasks: BackgroundTas
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/search/image")
-async def search_by_image(file: UploadFile = File(...), top_k: int = Form(10), background_tasks: BackgroundTasks = BackgroundTasks()):
+@app.post("/api/search/image")
+async def search_image(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(None),
+    image_url: str = Form(None),
+    top_k: int = Form(10)
+):
     """
     Search using an uploaded image.
     Requires PyTorch locally (Will fail gracefully if on Serverless).
@@ -151,15 +156,16 @@ async def search_by_image(file: UploadFile = File(...), top_k: int = Form(10), b
         
     try:
         start_time = time.time()
-        image_bytes = await file.read()
+        image_bytes = await file.read() if file else None
         results = search.search_by_image(
             image_bytes=image_bytes,
+            image_url=image_url,
             top_k=top_k
         )
         latency = (time.time() - start_time) * 1000
         
         # Log to Supabase for Drift Detection
-        background_tasks.add_task(log_search_query, f"[Image Upload: {file.filename}]", "image", latency, len(results))
+        background_tasks.add_task(log_search_query, f"[Image Upload: {file.filename if file else image_url}]", "image", latency, len(results))
         
         return {
             "results": results,
@@ -173,14 +179,14 @@ async def search_by_image(file: UploadFile = File(...), top_k: int = Form(10), b
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/health")
+@app.get("/api/health")
 def health_check():
     if search is None:
         raise HTTPException(status_code=503, detail="Service not ready")
     return {"status": "healthy"}
 
 
-@app.get("/find_similar_products")
+@app.get("/api/find_similar_products")
 def get_similar_products(
     product_id: str = Query(...),
     num_similar: int = Query(...),
@@ -198,7 +204,7 @@ def get_similar_products(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/product/{product_id}")
+@app.get("/api/product/{product_id}")
 def get_product_details(product_id: str):
     if search is None:
         raise HTTPException(status_code=503, detail="Service not ready")
@@ -210,7 +216,7 @@ def get_product_details(product_id: str):
     return meta
 
 
-@app.get("/find_similar_products_detailed")
+@app.get("/api/find_similar_products_detailed")
 def get_similar_products_detailed(
     product_id: str = Query(...),
     num_similar: int = Query(10, gt=0),
