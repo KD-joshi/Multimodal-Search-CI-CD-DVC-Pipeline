@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Search, Image as ImageIcon, Hash, UploadCloud, ChevronRight, Link as LinkIcon } from 'lucide-react';
 import './App.css';
+import appIcon from './assets/icon.png';
 
 // Split-Routing configuration
 // Text/UID queries route to the Serverless Vercel API
@@ -99,7 +100,10 @@ function App() {
         <div className="container">
 
           <header className="header-section animate-fade-in">
-            <h1 className="display-title">Multimodal Search</h1>
+            <h1 className="display-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+              <img src={appIcon} alt="App Icon" style={{ width: '48px', height: '48px', borderRadius: '12px' }} />
+              Multimodal Search
+            </h1>
             <p className="header-desc">
               This project demonstrates implementing scalable HNSW vector search on a large-scale fashion dataset. 
               Powered by Serverless Pinecone, Sentence-BERT, and FashionCLIP.
