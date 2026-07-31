@@ -27,17 +27,8 @@ jobs:
 
       - name: Trigger MLOps Notebook execution
         env:
-          SECRET_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
-          KAGGLE_USERNAME: "kuldeepjoshi2941"
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
         run: |
-          # Foolproof Authentication: Extract key if JSON, else assume raw key
-          EXTRACTED_KEY=$(echo "$SECRET_TOKEN" | jq -r '.key // empty' 2>/dev/null || echo "")
-          if [ -z "$EXTRACTED_KEY" ]; then
-            export KAGGLE_KEY="$SECRET_TOKEN"
-          else
-            export KAGGLE_KEY="$EXTRACTED_KEY"
-          fi
-          
           # This triggers the execution of the Drift & Retraining notebook headlessly on Kaggle's free GPUs
           echo "Triggering remote execution of drift_retraining.ipynb..."
           cd kaggle_mlops
