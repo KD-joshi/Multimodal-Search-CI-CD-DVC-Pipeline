@@ -1,6 +1,9 @@
 name: Automated MLOps Retraining Pipeline
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     # Run at 00:00 every Sunday
     - cron: '0 0 * * 0'
