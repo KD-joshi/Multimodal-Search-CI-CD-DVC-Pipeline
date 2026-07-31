@@ -458,7 +458,6 @@ async def search_image(
         image_bytes = await file.read() if file else None
         results = search.search_by_image(
             image_bytes=image_bytes,
-            image_url=image_url,
             top_k=top_k
         )
         latency = (time.time() - start_time) * 1000
