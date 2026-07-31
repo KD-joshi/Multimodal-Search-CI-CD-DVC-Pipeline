@@ -162,7 +162,15 @@ class ProductSimilaritySearch:
         inputs = self.clip_processor(images=image, return_tensors="pt")
         
         with torch.no_grad():
-            image_features = self.clip_model.get_image_features(**inputs)
+            outputs = self.clip_model.get_image_features(**inputs)
+            if hasattr(outputs, "image_embeds") and outputs.image_embeds is not None:
+                image_features = outputs.image_embeds
+            elif hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
+                image_features = outputs.pooler_output
+            elif isinstance(outputs, (tuple, list)):
+                image_features = outputs[0]
+            else:
+                image_features = outputs
             
         # L2 Normalize the features (Pinecone expects dotproduct metric with normalized vectors)
         image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
