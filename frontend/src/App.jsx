@@ -122,10 +122,10 @@ function App() {
               lineHeight: '1.5'
             }}>
               <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Architecture Note:</strong>
-              The <strong>Text Search</strong> mode is fully hosted on a Vercel Serverless Architecture. <br/><br/>
-              The <strong>Image Search</strong> mode is dynamically hosted on a remote Google Colab GPU notebook because Vercel restricts the compute required to run PyTorch inference models in production.<br/><br/>
+              The <strong>Text Search</strong> mode is fully functional 24/7 on a Vercel Serverless Architecture. Feel free to test it out!<br/><br/>
+              The <strong>Image Search</strong> mode is dynamically hosted on a remote Google Colab GPU notebook because Vercel restricts the compute required to run PyTorch models.<br/><br/>
               <span style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.75rem', color: 'var(--accent)', fontWeight: '500' }}>
-                Please contact <a href="mailto:kcjoshivrl@gmail.com" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>kcjoshivrl@gmail.com</a> to request a live demo or to have the Image backend spun up for testing!
+                The GPU server is currently offline. Please contact <a href="mailto:kcjoshivrl@gmail.com" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>kcjoshivrl@gmail.com</a> to request a live demo or to have the Image backend turned on for testing!
               </span>
             </div>
           </header>
