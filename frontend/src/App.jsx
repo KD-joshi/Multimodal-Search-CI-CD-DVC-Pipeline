@@ -23,9 +23,7 @@ function App() {
   const [imageUrl, setImageUrl] = useState('');
   const [imageTopK, setImageTopK] = useState(10);
 
-  const [uidQuery, setUidQuery] = useState('ad8a5a196d515ef09dfdaf082bdc37c4');
-  const [uidMode, setUidMode] = useState('image');
-  const [uidTopK, setUidTopK] = useState(10);
+
 
   const fileInputRef = useRef(null);
 
@@ -88,30 +86,7 @@ function App() {
     }
   };
 
-  const handleSearchUid = async () => {
-    if (!uidQuery.trim()) return;
-    setLoading(true); setError(null); setResults(null);
-    try {
-      const res = await fetch(`${TEXT_API_URL}/find_similar_products_detailed?product_id=${uidQuery}&num_similar=${uidTopK}&mode=${uidMode}`, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true'
-        }
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Server Error');
 
-      const formattedResults = data.similar_products.map(p => ({
-        ...p,
-        score: p.similarity_score
-      }));
-      setResults(formattedResults);
-      setMeta({ queryDesc: `ID: ${uidQuery.slice(0, 8)}... (${uidMode})`, count: formattedResults.length, latency: null });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
@@ -126,8 +101,29 @@ function App() {
           <header className="header-section animate-fade-in">
             <h1 className="display-title">Multimodal Search</h1>
             <p className="header-desc">
-              Discover products through natural language, visual uploads, or ID queries. Powered by Sentence-BERT and FashionCLIP.
+              This project demonstrates implementing scalable HNSW vector search on a large-scale fashion dataset. 
+              Powered by Serverless Pinecone, Sentence-BERT, and FashionCLIP.
             </p>
+            
+            <div style={{
+              background: 'rgba(255,255,255,0.05)', 
+              border: '1px solid rgba(255,255,255,0.1)', 
+              borderRadius: '12px', 
+              padding: '1.25rem', 
+              margin: '1.5rem auto 0', 
+              maxWidth: '600px',
+              textAlign: 'left',
+              fontSize: '0.9rem',
+              color: 'var(--text-secondary)',
+              lineHeight: '1.5'
+            }}>
+              <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Architecture Note:</strong>
+              The <strong>Text Search</strong> mode is fully hosted on a Vercel Serverless Architecture. <br/><br/>
+              The <strong>Image Search</strong> mode is dynamically hosted on a remote Google Colab GPU notebook because Vercel restricts the compute required to run PyTorch inference models in production.<br/><br/>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.75rem', color: 'var(--accent)', fontWeight: '500' }}>
+                Please contact <a href="mailto:kcjoshivrl@gmail.com" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>kcjoshivrl@gmail.com</a> to request a live demo or to have the Image backend spun up for testing!
+              </span>
+            </div>
           </header>
 
           <div className="tabs-container animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -137,9 +133,7 @@ function App() {
             <button className={`tab-btn ${activeMode === 'image' ? 'active' : ''}`} onClick={() => setActiveMode('image')}>
               <ImageIcon size={16} /> Image
             </button>
-            <button className={`tab-btn ${activeMode === 'uid' ? 'active' : ''}`} onClick={() => setActiveMode('uid')}>
-              <Hash size={16} /> Product ID
-            </button>
+
           </div>
 
           {/* Search Panels */}
@@ -229,35 +223,6 @@ function App() {
               </div>
             )}
 
-            {activeMode === 'uid' && (
-              <div className="search-panel">
-                <div className="search-row">
-                  <div className="input-group">
-                    <Hash className="input-icon" size={20} />
-                    <input
-                      type="text"
-                      className="search-input"
-                      placeholder="Enter Product UID..."
-                      value={uidQuery}
-                      onChange={e => setUidQuery(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleSearchUid()}
-                    />
-                  </div>
-                  <select className="select-input" value={uidMode} onChange={e => setUidMode(e.target.value)}>
-                    <option value="image">Image Only (CLIP)</option>
-                    <option value="text_structured">Text Only (SBERT)</option>
-                  </select>
-                  <select className="select-input" value={uidTopK} onChange={e => setUidTopK(Number(e.target.value))}>
-                    <option value={5}>Top 5</option>
-                    <option value={10}>Top 10</option>
-                    <option value={20}>Top 20</option>
-                  </select>
-                  <button className="btn-primary" onClick={handleSearchUid} disabled={!uidQuery.trim()}>
-                    Search <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Error */}
