@@ -1,6 +1,6 @@
 {
   "id": "kuldeepjoshi2941/mlops-drift-retraining",
-  "title": "Automated MLOps Drift Retraining",
+  "title": "mlops-drift-retraining",
   "code_file": "drift_retraining.ipynb",
   "language": "python",
   "kernel_type": "notebook",
